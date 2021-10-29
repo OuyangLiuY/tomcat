@@ -33,6 +33,7 @@ import org.apache.juli.logging.Log;
  * order configured at runtime, by implementing the <b>Pipeline</b> interface
  * as well.
  * <p>
+ * 容器将存在于 Catalina 中的多个概念层面中
  * Containers will exist at several conceptual levels within Catalina.  The
  * following examples represent common cases:
  * <ul>
@@ -48,29 +49,40 @@ import org.apache.juli.logging.Log;
  *     implements SingleThreadModel).
  * </ul>
  * A given deployment of Catalina need not include Containers at all of the
- * levels described above.  For example, an administration application
+ * levels described above.
+ * Catalina 的部署，不需要包含以上所有层级的容器。
+ * For example, an administration application
  * embedded within a network device (such as a router) might only contain
  * a single Context and a few Wrappers, or even a single Wrapper if the
- * application is relatively small.  Therefore, Container implementations
+ * application is relatively small.
+ * 例如，内嵌再网路设备（例如：路由器）中的管理应用程序可能只包含了一个context上下文和几个的wrappers，
+ * 如果应用相对较小，甚至可以只包含一个wrapper。
+ * Therefore, Container implementations
  * need to be designed so that they will operate correctly in the absence
  * of parent Containers in a given deployment.
+ * 因此，需要对容器的实现进行设计，以便于在给定部署中，没有父容器的情况下能够正确的运行。
  * <p>
  * A Container may also be associated with a number of support components
  * that provide functionality which might be shared (by attaching it to a
- * parent Container) or individually customized.  The following support
- * components are currently recognized:
+ * parent Container) or individually customized.
+ * 容器也可以和 一些支持的组件关联，提供可以共享的功能（通过将其附加到父容器）或者 自己定制。
+ * The following support  components are currently recognized:
  * <ul>
  * <li><b>Loader</b> - Class loader to use for integrating new Java classes
  *     for this Container into the JVM in which Catalina is running.
+ *     用于将此容器新的Java类集成到Catalina运行的JVM中的类加载器。
  * <li><b>Logger</b> - Implementation of the <code>log()</code> method
  *     signatures of the <code>ServletContext</code> interface.
  * <li><b>Manager</b> - Manager for the pool of Sessions associated with
  *     this Container.
+ *     《Session》管理
  * <li><b>Realm</b> - Read-only interface to a security domain, for
  *     authenticating user identities and their corresponding roles.
+ *     tomcat自带的《权限管理》
  * <li><b>Resources</b> - JNDI directory context enabling access to static
  *     resources, enabling custom linkages to existing server components when
  *     Catalina is embedded in a larger server.
+ *     本质上就是JNDI
  * </ul>
  *
  * @author Craig R. McClanahan
@@ -140,7 +152,7 @@ public interface Container extends Lifecycle {
     /**
      * Obtain the JMX domain under which this container will be / has been
      * registered.
-     *
+     *  获取已注册此容器的JMX域。
      * @return The JMX domain name
      */
     public String getDomain();
@@ -159,7 +171,7 @@ public interface Container extends Lifecycle {
     /**
      * Return the Pipeline object that manages the Valves associated with
      * this Container.
-     *
+     * 返回管理于此容器有关联的阀门（valves）的Pipeline对象。
      * @return The Pipeline
      */
     public Pipeline getPipeline();
