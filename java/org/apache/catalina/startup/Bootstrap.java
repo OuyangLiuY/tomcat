@@ -138,9 +138,33 @@ public final class Bootstrap {
 
     // -------------------------------------------------------- Private Methods
 
-
+    /**
+     *  默认的类加载机制:
+     *        Bootstrap
+     *           |
+     *        System
+     *           |
+     *        Common
+     *        /     \
+     *   Webapp1   Webapp2 ...
+     *
+     *  负载的类加载机制：
+     *  By default, the Server and Shared class loaders are not defined and the simplified hierarchy shown
+     *  above is used. This more complex hierarchy may be use by defining values for the server.
+     *  loader and/or shared.loader properties in conf/catalina.properties.
+     *    Bootstrap
+     *       |
+     *     System
+     *       |
+     *     Common
+     *      /  \
+     * Server  Shared
+     *          /  \
+     *    Webapp1  Webapp2 ...
+     */
     private void initClassLoaders() {
         try {
+            // 第一步获取 common 类类加器
             commonLoader = createClassLoader("common", null);
             if (commonLoader == null) {
                 // no config file, default to this loader - we might be in a 'single' env.
@@ -248,7 +272,7 @@ public final class Bootstrap {
      * @throws Exception Fatal initialization error
      */
     public void init() throws Exception {
-
+        // 1.初始化类加载器
         initClassLoaders();
 
         Thread.currentThread().setContextClassLoader(catalinaLoader);
@@ -259,6 +283,9 @@ public final class Bootstrap {
         if (log.isDebugEnabled()) {
             log.debug("Loading startup class");
         }
+        // 通过反射的方式获取 Catalina 类
+        // 为什么要通过反射的方式实现呢，
+        // 因为Catalina有自己的类加载器，而执行当前bootstrap的加载器是jdk系统自带system加载器。
         Class<?> startupClass = catalinaLoader.loadClass("org.apache.catalina.startup.Catalina");
         Object startupInstance = startupClass.getConstructor().newInstance();
 
@@ -266,21 +293,26 @@ public final class Bootstrap {
         if (log.isDebugEnabled()) {
             log.debug("Setting startup class properties");
         }
+        // 执行的Catalina中的设置父加载器的方法
         String methodName = "setParentClassLoader";
         Class<?> paramTypes[] = new Class[1];
+        // 反射获取系统加载器
         paramTypes[0] = Class.forName("java.lang.ClassLoader");
         Object paramValues[] = new Object[1];
+        // 没有配置的话，shareLoader类加载器就是当前common类加载器
         paramValues[0] = sharedLoader;
         Method method =
             startupInstance.getClass().getMethod(methodName, paramTypes);
+        // 执行setParentClassLoader方法，将父加载器设置为sharedLoader
         method.invoke(startupInstance, paramValues);
-
+        // 将Catalina对象接住
         catalinaDaemon = startupInstance;
     }
 
 
     /**
      * Load daemon.
+     * 加载守护进程执行Catalina的load方法
      */
     private void load(String[] arguments) throws Exception {
 
@@ -302,6 +334,7 @@ public final class Bootstrap {
         if (log.isDebugEnabled()) {
             log.debug("Calling startup class " + method);
         }
+        // 执行Catalina的load方法
         method.invoke(catalinaDaemon, param);
     }
 
