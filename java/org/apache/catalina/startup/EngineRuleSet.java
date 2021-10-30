@@ -74,7 +74,7 @@ public class EngineRuleSet extends RuleSetBase {
      * specified <code>Digester</code> instance, associating them with
      * our namespace URI (if any).  This method should only be called
      * by a Digester instance.</p>
-     *
+     *   配置engine标签的解析规则
      * @param digester Digester instance to which the new Rule instances
      *  should be added.
      */
@@ -86,6 +86,7 @@ public class EngineRuleSet extends RuleSetBase {
                                  "className");
         digester.addSetProperties(prefix + "Engine");
         digester.addRule(prefix + "Engine",
+                         // 通过配置的类路径，反射加载listener事件，达到了解耦目的
                          new LifecycleListenerRule
                          ("org.apache.catalina.startup.EngineConfig",
                           "engineConfigClass"));
@@ -121,8 +122,5 @@ public class EngineRuleSet extends RuleSetBase {
         digester.addSetNext(prefix + "Engine/Valve",
                             "addValve",
                             "org.apache.catalina.Valve");
-
     }
-
-
 }

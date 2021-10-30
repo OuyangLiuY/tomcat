@@ -529,22 +529,21 @@ public class Catalina {
      * Start a new server instance.
      */
     public void load() {
-
+        // 加载标志位
         if (loaded) {
             return;
         }
         loaded = true;
 
         long t1 = System.nanoTime();
-
+        // 未使用的方法
         initDirs();
-
         // Before digester - it may be needed
         initNaming();
-
         // Create and execute our Digester
+        // 创建digester对象，用来处理xml配置的server，service，host、engine等对象
         Digester digester = createStartDigester();
-
+        // 创建流对象，为了读取xml文件
         InputSource inputSource = null;
         InputStream inputStream = null;
         File file = null;
@@ -608,6 +607,7 @@ public class Catalina {
             try {
                 inputSource.setByteStream(inputStream);
                 digester.push(this);
+                // 解析读取到的xml流对象
                 digester.parse(inputSource);
             } catch (SAXParseException spe) {
                 log.warn("Catalina.start using " + getConfigFile() + ": " +
@@ -636,6 +636,7 @@ public class Catalina {
 
         // Start the new server
         try {
+            // 执行父类的init方法，完成初始化
             getServer().init();
         } catch (LifecycleException e) {
             if (Boolean.getBoolean("org.apache.catalina.startup.EXIT_ON_INIT_FAILURE")) {
