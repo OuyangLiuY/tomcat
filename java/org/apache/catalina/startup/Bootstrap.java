@@ -315,7 +315,6 @@ public final class Bootstrap {
      * 加载守护进程执行Catalina的load方法
      */
     private void load(String[] arguments) throws Exception {
-
         // Call the load() method
         String methodName = "load";
         Object param[];

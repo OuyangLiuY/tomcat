@@ -56,6 +56,7 @@ import org.apache.tomcat.util.res.StringManager;
 /**
  * Standard implementation of the <b>Server</b> interface, available for use
  * (but not required) when deploying and starting Catalina.
+ * server。xml中配置得 port = 8005 和 shutdown = "SHUTDOWN" 可以推测出，当前server对象监听得关闭server得命令和端口
  *
  * @author Craig R. McClanahan
  */
@@ -110,6 +111,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
 
     /**
      * The port number on which we wait for shutdown commands.
+     * 从server.XML配置中就可以看到，配置得监听端口号就是 8005
      */
     private int port = 8005;
 
@@ -336,10 +338,11 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
      */
     @Override
     public void addService(Service service) {
-
+        // 给当前需要添加得service添加管理自己得server对象
         service.setServer(this);
-
         synchronized (servicesLock) {
+            // 给services中添加一个services
+            // 复制数组，然后放置新的service（这代码不好看，而且太low，为啥不用可变数组？或者别的方式？）
             Service results[] = new Service[services.length + 1];
             System.arraycopy(services, 0, results, 0, services.length);
             results[services.length] = service;
@@ -347,6 +350,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
 
             if (getState().isAvailable()) {
                 try {
+                    // 启动改service组件
                     service.start();
                 } catch (LifecycleException e) {
                     // Ignore
@@ -372,9 +376,9 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                     // Ignored
                 }
             }
-            t.interrupt();
+            t.interrupt(); // 中断请求，线程结束得优雅得处理方式
             try {
-                t.join(1000);
+                t.join(1000);// 等待1s处理
             } catch (InterruptedException e) {
                 // Ignored
             }
@@ -389,11 +393,12 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
     @Override
     public void await() {
         // Negative values - don't wait on port - tomcat is embedded or we just don't like ports
+        // 使用内嵌得方式管理tomcat，此时管理方式可以交给spring，不需要自己处理
         if (port == -2) {
             // undocumented yet - for embedding apps that are around, alive.
             return;
         }
-        if (port==-1) {
+        if (port==-1) { // 执行本地变量阻塞等待
             try {
                 awaitThread = Thread.currentThread();
                 while(!stopAwait) {
@@ -411,6 +416,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
 
         // Set up a server socket to wait on
         try {
+            // 创建服务套接字
             awaitSocket = new ServerSocket(port, 1,
                     InetAddress.getByName(address));
         } catch (IOException e) {
@@ -432,14 +438,15 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
 
                 // Wait for the next connection
                 Socket socket = null;
+                // 接受当前socket连接从客户端传过来得shutdown字符
                 StringBuilder command = new StringBuilder();
                 try {
                     InputStream stream;
                     long acceptStartTime = System.currentTimeMillis();
                     try {
-                        socket = serverSocket.accept();
-                        socket.setSoTimeout(10 * 1000);  // Ten seconds
-                        stream = socket.getInputStream();
+                        socket = serverSocket.accept();// 接受客户端请求
+                        socket.setSoTimeout(10 * 1000);  // Ten seconds 设置超时时间
+                        stream = socket.getInputStream(); // 获取客户端发送过来得数据
                     } catch (SocketTimeoutException ste) {
                         // This should never happen but bug 56684 suggests that
                         // it does.
@@ -493,6 +500,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                 }
 
                 // Match against our command string
+                // 是否匹配上终止命令：SHUTDOWN
                 boolean match = command.toString().equals(shutdown);
                 if (match) {
                     log.info(sm.getString("standardServer.shutdownViaPort"));
@@ -758,6 +766,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
         globalNamingResources.start();
 
         // Start our defined Services
+        // 逐个启动服务
         synchronized (servicesLock) {
             for (Service service : services) {
                 service.start();

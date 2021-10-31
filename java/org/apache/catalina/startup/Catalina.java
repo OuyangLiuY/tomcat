@@ -606,6 +606,7 @@ public class Catalina {
 
             try {
                 inputSource.setByteStream(inputStream);
+                // 传入当前对象 Catalina 用于实例化对象
                 digester.push(this);
                 // 解析读取到的xml流对象
                 digester.parse(inputSource);
@@ -626,7 +627,8 @@ public class Catalina {
                 }
             }
         }
-
+        // xml中完成对需要对象的 server，service，engine，host，context对象的初始化
+        // 将catalina对象赋予server
         getServer().setCatalina(this);
         getServer().setCatalinaHome(Bootstrap.getCatalinaHomeFile());
         getServer().setCatalinaBase(Bootstrap.getCatalinaBaseFile());
@@ -765,7 +767,6 @@ public class Catalina {
         } catch (LifecycleException e) {
             log.error("Catalina.stop", e);
         }
-
     }
 
 
@@ -773,9 +774,8 @@ public class Catalina {
      * Await and shutdown.
      */
     public void await() {
-
         getServer().await();
-
+        getServer().await();
     }
 
 
@@ -783,13 +783,11 @@ public class Catalina {
      * Print usage information for this application.
      */
     protected void usage() {
-
         System.out.println
             ("usage: java org.apache.catalina.startup.Catalina"
              + " [ -config {pathname} ]"
              + " [ -nonaming ] "
              + " { -help | start | stop }");
-
     }
 
 
@@ -806,7 +804,6 @@ public class Catalina {
         System.setOut(new SystemLogHandler(System.out));
         System.setErr(new SystemLogHandler(System.err));
     }
-
 
     protected void initNaming() {
         // Setting additional variables
@@ -910,8 +907,5 @@ final class SetParentClassLoaderRule extends Rule {
 
         Container top = (Container) digester.peek();
         top.setParentClassLoader(parentClassLoader);
-
     }
-
-
 }
