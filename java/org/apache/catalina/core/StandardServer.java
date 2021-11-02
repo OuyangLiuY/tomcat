@@ -389,6 +389,8 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
      * Wait until a proper shutdown command is received, then return.
      * This keeps the main thread alive - the thread pool listening for http
      * connections is daemon threads.
+     *  等待，直到接受一个正确得shutdown命令然后返回。
+     *  这使得主线程保持活跃的装态，次线程池中监听http的连接是一个守护进程。
      */
     @Override
     public void await() {
@@ -416,7 +418,7 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
 
         // Set up a server socket to wait on
         try {
-            // 创建服务套接字
+            // 创建服务套接字，为了接受shutdown命令
             awaitSocket = new ServerSocket(port, 1,
                     InetAddress.getByName(address));
         } catch (IOException e) {
@@ -425,17 +427,14 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                                + "]: ", e);
             return;
         }
-
         try {
             awaitThread = Thread.currentThread();
-
             // Loop waiting for a connection and a valid command
             while (!stopAwait) {
                 ServerSocket serverSocket = awaitSocket;
                 if (serverSocket == null) {
                     break;
                 }
-
                 // Wait for the next connection
                 Socket socket = null;
                 // 接受当前socket连接从客户端传过来得shutdown字符
@@ -464,7 +463,6 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
                         log.error(sm.getString("standardServer.accept.error"), e);
                         break;
                     }
-
                     // Read a set of characters from the socket
                     int expected = 1024; // Cut off to avoid DoS attack
                     while (expected < shutdown.length()) {
@@ -859,13 +857,13 @@ public final class StandardServer extends LifecycleMBeanBase implements Server {
         for (Service service : services) {
             service.destroy();
         }
-
+        // 销毁JNDI
         globalNamingResources.destroy();
-
+        // 解除JMX
         unregister(onameMBeanFactory);
-
+        // 解除注册
         unregister(onameStringCache);
-
+        // 调用父类
         super.destroyInternal();
     }
 
