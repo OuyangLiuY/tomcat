@@ -33,6 +33,7 @@ import org.apache.tomcat.util.res.StringManager;
  * headers (once committed) and the response body. Note that buffering of the
  * response body happens at a higher level.
  */
+// 用于将服务器处理完得数据通过socket写出给客户端。
 public class Http11OutputBuffer implements HttpOutputBuffer {
 
     // -------------------------------------------------------------- Variables
@@ -69,17 +70,20 @@ public class Http11OutputBuffer implements HttpOutputBuffer {
     /**
      * Filter library for processing the response body.
      */
+    // 用于处理响应正文的过滤器库
     protected OutputFilter[] filterLibrary;
 
 
     /**
      * Active filters for the current request.
+     * 当前请求得活动过滤器。
      */
     protected OutputFilter[] activeFilters;
 
 
     /**
      * Index of the last active filter.
+     * 最后得活动过滤器索引。
      */
     protected int lastActiveFilter;
 
@@ -87,12 +91,14 @@ public class Http11OutputBuffer implements HttpOutputBuffer {
     /**
      * Underlying output buffer.
      */
+    // 底层输出http得缓冲区
     protected HttpOutputBuffer outputStreamOutputBuffer;
 
 
     /**
      * Wrapper for socket where data will be written to.
      */
+    // 用来操作socket套接字得写入写出。
     protected SocketWrapperBase<?> socketWrapper;
 
 
@@ -289,6 +295,7 @@ public class Http11OutputBuffer implements HttpOutputBuffer {
      * Recycle the output buffer. This should be called when closing the
      * connection.
      */
+    // 回收output缓冲区，连接关闭之后调用
     public void recycle() {
         nextRequest();
         socketWrapper = null;

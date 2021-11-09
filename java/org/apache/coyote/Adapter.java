@@ -20,7 +20,7 @@ import org.apache.tomcat.util.net.SocketEvent;
 
 /**
  * Adapter. This represents the entry point in a coyote-based servlet container.
- *
+ * Adapter：这表示基于coyote-based servlet 容器的入口点。
  *
  * @author Remy Maucherat
  * @see ProtocolHandler
@@ -29,7 +29,7 @@ public interface Adapter {
 
     /**
      * Call the service method, and notify all listeners
-     *
+     * 调用service的方法，并且通知所有的监听器。
      * @param req The request object
      * @param res The response object
      *

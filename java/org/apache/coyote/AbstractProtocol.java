@@ -74,6 +74,8 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
      * Endpoint that provides low-level network I/O - must be matched to the
      * ProtocolHandler implementation (ProtocolHandler using NIO, requires NIO
      * Endpoint etc.).
+     * 提供低级网络 I/O 必须匹配ProtocolHandler的实现。（例如：ProtocolHandler使用NIO，Endpoint那就必须也有NIO）
+     * 真正处理连接的就是端点。对应的协议也需要对应上。
      */
     private final AbstractEndpoint<S> endpoint;
 
@@ -699,6 +701,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
         private final AbstractProtocol<S> proto;
         private final RequestGroupInfo global = new RequestGroupInfo();
         private final AtomicLong registerCount = new AtomicLong(0);
+        // 一个NioChannel 对应一个处理器，一个processor包含了整个请求
         private final Map<S,Processor> connections = new ConcurrentHashMap<>();
         private final RecycledProcessors recycledProcessors = new RecycledProcessors(this);
 
@@ -725,6 +728,8 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
         }
 
 
+        // 拿到当前得处理器，根据不同得状态处理不同请求，
+        // 异步得话，就添加到Map队列中
         @Override
         public SocketState process(SocketWrapperBase<S> wrapper, SocketEvent status) {
             if (getLog().isDebugEnabled()) {
@@ -737,7 +742,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
             }
 
             S socket = wrapper.getSocket();
-
+            // 拿到NioChannel对应得处理器
             Processor processor = connections.get(socket);
             if (getLog().isDebugEnabled()) {
                 getLog().debug(sm.getString("abstractConnectionHandler.connectionsGet",
@@ -748,6 +753,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
             // dispatched. Because of delays in the dispatch process, the
             // timeout may no longer be required. Check here and avoid
             // unnecessary processing.
+            // 当前状态即使是超时，但是如果满足一下条件那么就是可用得open状态
             if (SocketEvent.TIMEOUT == status &&
                     (processor == null ||
                     !processor.isAsync() && !processor.isUpgrade() ||
@@ -758,17 +764,19 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
 
             if (processor != null) {
                 // Make sure an async timeout doesn't fire
+                // 从等待线程中移除，因为我下面要处理了。
                 getProtocol().removeWaitingProcessor(processor);
             } else if (status == SocketEvent.DISCONNECT || status == SocketEvent.ERROR) {
                 // Nothing to do. Endpoint requested a close and there is no
                 // longer a processor associated with this socket.
                 return SocketState.CLOSED;
             }
-
+            // 容器线程，用来标记 线程要去处理容器得请求了
             ContainerThreadMarker.set();
 
             try {
-                if (processor == null) {
+                // 重试？ 3个判空重试。
+                if (processor == null) { //http得协商，那就是http得升级
                     String negotiatedProtocol = wrapper.getNegotiatedProtocol();
                     // OpenSSL typically returns null whereas JSSE typically
                     // returns "" when no protocol is negotiated
@@ -888,10 +896,11 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     }
                 } while ( state == SocketState.UPGRADING);
 
-                if (state == SocketState.LONG) {
+                if (state == SocketState.LONG) { //长连接状态，当前连接保持
                     // In the middle of processing a request/response. Keep the
                     // socket associated with the processor. Exact requirements
                     // depend on type of long poll
+                    // 正在处理当前得request或response得中间状态，那么就需要
                     longPoll(wrapper, processor);
                     if (processor.isAsync()) {
                         getProtocol().addWaitingProcessor(processor);
@@ -902,7 +911,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                     connections.remove(socket);
                     release(processor);
                     wrapper.registerReadInterest();
-                } else if (state == SocketState.SENDFILE) {
+                } else if (state == SocketState.SENDFILE) { // sendfile，系统调用
                     // Sendfile in progress. If it fails, the socket will be
                     // closed. If it works, the socket either be added to the
                     // poller (or equivalent) to await more data or processed
@@ -917,11 +926,11 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                         longPoll(wrapper, processor);
                         getProtocol().addWaitingProcessor(processor);
                     }
-                } else if (state == SocketState.SUSPENDED) {
+                } else if (state == SocketState.SUSPENDED) { //挂起，暂停状态
                     // Don't add sockets back to the poller.
                     // The resumeProcessing() method will add this socket
                     // to the poller.
-                } else {
+                } else { // 关闭状态，closed状态
                     // Connection closed. OK to recycle the processor.
                     // Processors handling upgrades require additional clean-up
                     // before release.
@@ -998,6 +1007,7 @@ public abstract class AbstractProtocol<S> implements ProtocolHandler,
                 //  - this is an upgraded connection
                 //  - the request line/headers have not been completely
                 //    read
+                // 注册为当前Nio得read状态
                 socket.registerReadInterest();
             }
         }

@@ -650,7 +650,10 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
      */
     public class Poller implements Runnable {
 
+        // selector 包含3个keys，一个总keys，一个是已经注册的selectKeys,一个是cancelKeys，
+        // 取消键不能直接获取，但它是keys的一个子集
         private Selector selector;
+        //线程积压，造成maxConnection 最大挤压，优化内存过大，配置，使用业务线程
         private final SynchronizedQueue<PollerEvent> events =
                 new SynchronizedQueue<>();
 
@@ -762,6 +765,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
             addEvent(r);
         }
 
+        // 取消当前key
         public NioSocketWrapper cancelledKey(SelectionKey key) {
             NioSocketWrapper ka = null;
             try {
@@ -829,6 +833,8 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
          * The background thread that adds sockets to the Poller, checks the
          * poller for triggered events and hands the associated socket off to an
          * appropriate processor as events occur.
+         *
+         *  执行event事件，执行select。selector()处理事件。
          */
         @Override
         public void run() {
@@ -843,14 +849,18 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         if (wakeupCounter.getAndSet(-1) > 0) {
                             // If we are here, means we have other stuff to do
                             // Do a non blocking select
+                            // 不阻塞获取
                             keyCount = selector.selectNow();
                         } else {
+                            // 阻塞1秒去获取，
                             keyCount = selector.select(selectorTimeout);
                         }
+                        // 不管成不成功，恢复状态
                         wakeupCounter.set(0);
                     }
                     if (close) {
                         events();
+                        // 无条件进入处理周期
                         timeout(0, false);
                         try {
                             selector.close();
@@ -884,26 +894,28 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                     }
                 }
 
-                // Process timeouts
+                // Process timeouts  啥超时？
                 timeout(keyCount,hasEvents);
             }
 
             getStopLatch().countDown();
         }
-
+        // 处理key中携带得数据，
         protected void processKey(SelectionKey sk, NioSocketWrapper attachment) {
             try {
                 if (close) {
                     cancelledKey(sk);
+                    // cancelled，channel closed， selector closed
                 } else if ( sk.isValid() && attachment != null ) {
                     if (sk.isReadable() || sk.isWritable() ) {
                         if ( attachment.getSendfileData() != null ) {
                             processSendfile(sk,attachment, false);
                         } else {
+                            // 取消注册，避免多线程处理
                             unreg(sk, attachment, sk.readyOps());
                             boolean closeSocket = false;
                             // Read goes before write
-                            if (sk.isReadable()) {
+                                if (sk.isReadable()) {
                                 if (!processSocket(attachment, SocketEvent.OPEN_READ, true)) {
                                     closeSocket = true;
                                 }
@@ -929,12 +941,13 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                 log.error("",t);
             }
         }
-
+        // 本质是做系统调用，做到fd真是文件直接拷贝到socket中
         public SendfileState processSendfile(SelectionKey sk, NioSocketWrapper socketWrapper,
                 boolean calledByProcessor) {
             NioChannel sc = null;
             try {
                 unreg(sk, socketWrapper, sk.readyOps());
+                // 系统调用 底层的sendfile，
                 SendfileData sd = socketWrapper.getSendfileData();
 
                 if (log.isTraceEnabled()) {
@@ -960,6 +973,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         socketWrapper.updateLastWrite();
                     }
                 } else {
+                    // 把原生的数据，传输到WritableByteChannel
                     long written = sd.fchannel.transferTo(sd.pos,sd.length,wc);
                     if (written > 0) {
                         sd.pos += written;
@@ -1044,6 +1058,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
 
         protected void unreg(SelectionKey sk, NioSocketWrapper socketWrapper, int readyOps) {
             // This is a must, so that we don't have multiple threads messing with the socket
+            // 将感兴趣事件取消 sk.interestOps() & (~readyOps)
             reg(sk, socketWrapper, sk.interestOps() & (~readyOps));
         }
 
@@ -1064,11 +1079,13 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
             if (nextExpiration > 0 && (keyCount > 0 || hasEvents) && (now < nextExpiration) && !close) {
                 return;
             }
+            // 处理的
             int keycount = 0;
             try {
                 for (SelectionKey key : selector.keys()) {
                     keycount++;
                     try {
+                        // 数据的包装
                         NioSocketWrapper ka = (NioSocketWrapper) key.attachment();
                         if ( ka == null ) {
                             cancelledKey(key); //we don't support any keys without attachments
@@ -1079,6 +1096,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         } else if ((ka.interestOps()&SelectionKey.OP_READ) == SelectionKey.OP_READ ||
                                   (ka.interestOps()&SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE) {
                             boolean isTimedOut = false;
+                            // 检测读超时，写超时
                             // Check for read timeout
                             if ((ka.interestOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ) {
                                 long delta = now - ka.getLastRead();
@@ -1095,6 +1113,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                                 key.interestOps(0);
                                 ka.interestOps(0); //avoid duplicate timeout calls
                                 ka.setError(new SocketTimeoutException());
+                                // 处理socket
                                 if (!processSocket(ka, SocketEvent.ERROR, true)) {
                                     cancelledKey(key);
                                 }
@@ -1596,6 +1615,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
      * This class is the equivalent of the Worker, but will simply use in an
      * external Executor thread pool.
      */
+    // 处理协议升级
     protected class SocketProcessor extends SocketProcessorBase<NioChannel> {
 
         public SocketProcessor(SocketWrapperBase<NioChannel> socketWrapper, SocketEvent event) {
@@ -1612,6 +1632,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
 
                 try {
                     if (key != null) {
+                         // 协议升级？ 不过这里貌似没有
                         if (socket.isHandshakeComplete()) {
                             // No TLS handshaking required. Let the handler
                             // process this socket / event combination.
@@ -1650,7 +1671,7 @@ public class NioEndpoint extends AbstractJsseEndpoint<NioChannel> {
                         state = getHandler().process(socketWrapper, event);
                     }
                     if (state == SocketState.CLOSED) {
-                        close(socket, key);
+                        close(socket ,key);
                     }
                 } else if (handshake == -1 ) {
                     getHandler().process(socketWrapper, SocketEvent.CONNECT_FAIL);

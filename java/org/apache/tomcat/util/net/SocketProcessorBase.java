@@ -17,10 +17,11 @@
 package org.apache.tomcat.util.net;
 
 import java.util.Objects;
-
+// socket处理线程
 public abstract class SocketProcessorBase<S> implements Runnable {
-
+    // 操作数据的读写buffer
     protected SocketWrapperBase<S> socketWrapper;
+    // 事件状态定义
     protected SocketEvent event;
 
     public SocketProcessorBase(SocketWrapperBase<S> socketWrapper, SocketEvent event) {
@@ -50,6 +51,6 @@ public abstract class SocketProcessorBase<S> implements Runnable {
         }
     }
 
-
+    // 父类模板方法，供子类实现，因不同子类有不同实现
     protected abstract void doRun();
 }

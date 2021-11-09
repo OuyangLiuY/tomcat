@@ -61,6 +61,8 @@ import org.apache.tomcat.util.res.StringManager;
  * @author Craig R. McClanahan
  * @author Remy Maucherat
  */
+
+// 郊狼适配器: engine和connection的桥梁。
 public class CoyoteAdapter implements Adapter {
 
     private static final Log log = LogFactory.getLog(CoyoteAdapter.class);
@@ -126,6 +128,7 @@ public class CoyoteAdapter implements Adapter {
     // -------------------------------------------------------- Adapter Methods
 
     @Override
+    // 异步请求，
     public boolean asyncDispatch(org.apache.coyote.Request req, org.apache.coyote.Response res,
             SocketEvent status) throws Exception {
 
@@ -321,6 +324,9 @@ public class CoyoteAdapter implements Adapter {
     public void service(org.apache.coyote.Request req, org.apache.coyote.Response res)
             throws Exception {
 
+        // org.apache.coyote.Request req 对应httpServletRequest
+        // 使用数组对象来对应。为什么呢？ 因为在这里数组要比其他容器（map）高效。
+        // 作为一个中间件，要尽量少的使用包装的组件，尽量少的占用内存，往往使用最原始的就是最好的，但是有时候又迫不得已。
         Request request = (Request) req.getNote(ADAPTER_NOTES);
         Response response = (Response) res.getNote(ADAPTER_NOTES);
 
@@ -349,23 +355,28 @@ public class CoyoteAdapter implements Adapter {
 
         boolean async = false;
         boolean postParseSuccess = false;
-
+        // 设置当前工作线程名称
         req.getRequestProcessor().setWorkerThreadName(THREAD_NAME.get());
 
         try {
             // Parse and set Catalina and configuration specific
             // request parameters
+            // 解析并设置 Catalina 和配置特定的请求参数
             postParseSuccess = postParseRequest(req, request, res, response);
+            // 设置成功，开始执行容器
             if (postParseSuccess) {
                 //check valves if we support async
                 request.setAsyncSupported(
                         connector.getService().getContainer().getPipeline().isAsyncSupported());
                 // Calling the container
+                // 开始执行容器，通过pipeline的valve
+                // 使用Valve的invoke来传递request和response，调用流程是: engine -> host -> context
                 connector.getService().getContainer().getPipeline().getFirst().invoke(
                         request, response);
             }
             if (request.isAsync()) {
                 async = true;
+                // 异步的话，是有读监听和监听的。
                 ReadListener readListener = req.getReadListener();
                 if (readListener != null && request.isFinished()) {
                     // Possible the all data may have been read during service()
@@ -571,7 +582,7 @@ public class CoyoteAdapter implements Adapter {
      * Perform the necessary processing after the HTTP headers have been parsed
      * to enable the request/response pair to be passed to the start of the
      * container pipeline for processing.
-     *
+     * 在解析 HTTP 标头后执行必要的处理，以使请求响应对能够传递到容器管道的开始处进行处理。
      * @param req      The coyote request object
      * @param request  The catalina request object
      * @param res      The coyote response object
@@ -585,6 +596,8 @@ public class CoyoteAdapter implements Adapter {
      * @throws ServletException If the supported methods of the target servlet
      *                          cannot be determined
      */
+
+    // 解析请求路径的数据，将其放入到request中，session，cookie等等。
     protected boolean postParseRequest(org.apache.coyote.Request req, Request request,
             org.apache.coyote.Response res, Response response) throws IOException, ServletException {
 
@@ -756,8 +769,9 @@ public class CoyoteAdapter implements Adapter {
                 }
                 return true;
             }
+            // 解析session
             parseSessionSslId(request);
-
+            // 获取session Id
             sessionID = request.getRequestedSessionId();
 
             mapRequired = false;
@@ -916,6 +930,7 @@ public class CoyoteAdapter implements Adapter {
      * @param req The Coyote request object
      * @param request The Servlet request object
      */
+    // 解析请求路径上的参数，将其放入到request:HttpServletRequest
     protected void parsePathParameters(org.apache.coyote.Request req,
             Request request) {
 

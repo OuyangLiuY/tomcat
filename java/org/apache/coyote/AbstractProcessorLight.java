@@ -32,6 +32,7 @@ import org.apache.tomcat.util.net.SocketWrapperBase;
  * a basis for all Processor implementations from the light-weight upgrade
  * processors to the HTTP/AJP processors.
  */
+// 提供轻量级得http处理
 public abstract class AbstractProcessorLight implements Processor {
 
     private Set<DispatchType> dispatches = new CopyOnWriteArraySet<>();
@@ -90,8 +91,9 @@ public abstract class AbstractProcessorLight implements Processor {
                 // dispatches to process.
                 dispatches = getIteratorAndClearDispatches();
             }
-        } while (state == SocketState.ASYNC_END ||
-                dispatches != null && state != SocketState.CLOSED);
+        } while (state == SocketState.ASYNC_END
+            || dispatches != null
+            && state != SocketState.CLOSED);
 
         return state;
     }
@@ -165,7 +167,9 @@ public abstract class AbstractProcessorLight implements Processor {
      * called again until there is a new HTTP request to process. Note that the
      * request type may change during processing which may result in one or more
      * calls to {@link #dispatch(SocketEvent)}. Requests may be pipe-lined.
-     *
+     * 对于新请求和部分读取 HTTP 请求行或 HTTP 标头的请求，都会调用此方法，
+     * 当完全读取header后，不会再次调用此方法，直到有新的 HTTP 请求需要处理。
+     * 如果没有完全读取到数据，那么可以将数据放到缓存中，等待下次读取该数据。
      * @param socketWrapper The connection to process
      *
      * @return The state the caller should put the socket in when this method

@@ -38,6 +38,7 @@ import org.apache.tomcat.util.res.StringManager;
 /**
  * InputBuffer for HTTP that provides request header parsing as well as transfer
  * encoding.
+ * 提供请求头解析和转化编码得http输入缓冲区。
  */
 public class Http11InputBuffer implements InputBuffer, ApplicationBufferHandler {
 
@@ -346,6 +347,8 @@ public class Http11InputBuffer implements InputBuffer, ApplicationBufferHandler 
      * Read the request line. This function is meant to be used during the
      * HTTP request header parsing. Do NOT attempt to read the request body
      * using it.
+     *
+     * 读请求行。此函数旨在解析http请求头期间被使用。不要试图使用它去读请求body。
      *
      * @throws IOException If an exception occurs during the underlying socket
      * read operations, or if the given buffer is not big enough to accommodate

@@ -20,11 +20,14 @@ import java.nio.ByteBuffer;
 
 import org.apache.tomcat.util.buf.ByteBufferUtils;
 
+/**
+ * socket 的 buffer处理器，读buffer/写buffer对的包装
+ */
 public class SocketBufferHandler {
-
+    // 读写缓冲区的条件，用户读写转换
     private volatile boolean readBufferConfiguredForWrite = true;
     private volatile ByteBuffer readBuffer;
-
+    // 写写缓冲区的条件，用户写读转换
     private volatile boolean writeBufferConfiguredForWrite = true;
     private volatile ByteBuffer writeBuffer;
 

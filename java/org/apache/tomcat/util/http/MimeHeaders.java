@@ -516,7 +516,7 @@ class ValuesEnumerator implements Enumeration<String> {
 }
 
 class MimeHeaderField {
-
+    // 工厂模式，创建MessageBytes对象
     private final MessageBytes nameB = MessageBytes.newInstance();
     private final MessageBytes valueB = MessageBytes.newInstance();
 

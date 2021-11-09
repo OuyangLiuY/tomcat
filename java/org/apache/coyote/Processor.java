@@ -26,6 +26,7 @@ import org.apache.tomcat.util.net.SocketWrapperBase;
 
 /**
  * Common interface for processors of all protocols.
+ * 所有协议得公共接口。
  */
 public interface Processor {
 
@@ -77,6 +78,7 @@ public interface Processor {
      *            expired. If negative, the timeout will always be treated as ifq
      *            it has expired.
      */
+    // 检测异步超时
     void timeoutAsync(long now);
 
     /**

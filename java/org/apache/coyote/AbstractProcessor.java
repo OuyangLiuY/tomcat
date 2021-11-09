@@ -43,6 +43,7 @@ import org.apache.tomcat.util.res.StringManager;
  * Provides functionality and attributes common to all supported protocols
  * (currently HTTP and AJP) for processing a single request/response.
  */
+// 提供所有单个http处理请求
 public abstract class AbstractProcessor extends AbstractProcessorLight implements ActionHook {
 
     private static final StringManager sm = StringManager.getManager(AbstractProcessor.class);
@@ -51,6 +52,7 @@ public abstract class AbstractProcessor extends AbstractProcessorLight implement
     protected char[] hostNameC = new char[0];
 
     protected Adapter adapter;
+    // 异步处理
     protected final AsyncStateMachine asyncStateMachine;
     private volatile long asyncTimeout = -1;
     /*
@@ -202,6 +204,7 @@ public abstract class AbstractProcessor extends AbstractProcessorLight implement
 
 
     @Override
+    // 根据 SocketEvent 得状态，获取 SocketState 的状态，用来做对应得处理
     public final SocketState dispatch(SocketEvent status) throws IOException {
 
         if (status == SocketEvent.OPEN_WRITE && response.getWriteListener() != null) {
@@ -218,6 +221,7 @@ public abstract class AbstractProcessor extends AbstractProcessorLight implement
                 request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, ioe);
             }
         } else if (status == SocketEvent.OPEN_READ && request.getReadListener() != null) {
+            // 更新异步状态
             dispatchNonBlockingRead();
         } else if (status == SocketEvent.ERROR) {
             // An I/O error occurred on a non-container thread. This includes:
@@ -374,6 +378,7 @@ public abstract class AbstractProcessor extends AbstractProcessorLight implement
 
 
     @Override
+    // 当前使用得是策略模式，根据不同得ActionCode来完成不同得处理，减少了if else得判断。
     public final void action(ActionCode actionCode, Object param) {
         switch (actionCode) {
         // 'Normal' servlet support

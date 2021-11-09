@@ -65,6 +65,13 @@ import org.apache.tomcat.util.net.SendfileState;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 import org.apache.tomcat.util.res.StringManager;
 
+
+/**
+ *  一般处理请求得写法是，获取处理前得数据，比如建立连接，获取元数据，使用handler，
+ *  实际完成处理请求得使用process。
+ *  Http 1.1 处理器，用来处理请求头数据，将其request包装成HttpServletRequest/response一样。
+ *  完成connection和引擎数据封装交互。数据从connection传递到引擎Engine并将引擎处理好得数据放入到response返回。
+ */
 public class Http11Processor extends AbstractProcessor {
 
     private static final Log log = LogFactory.getLog(Http11Processor.class);
@@ -74,13 +81,14 @@ public class Http11Processor extends AbstractProcessor {
      */
     private static final StringManager sm = StringManager.getManager(Http11Processor.class);
 
-
+    // http 1.1 协议处理器，处理http和https协议
     private final AbstractHttp11Protocol<?> protocol;
 
 
     /**
      * Input.
      */
+    // 主要解析请求头得输入缓冲区，request
     protected final Http11InputBuffer inputBuffer;
 
 
@@ -89,7 +97,7 @@ public class Http11Processor extends AbstractProcessor {
      */
     protected final Http11OutputBuffer outputBuffer;
 
-
+    // http协议解析器
     private final HttpParser httpParser;
 
 
@@ -621,6 +629,7 @@ public class Http11Processor extends AbstractProcessor {
             if (getErrorState().isIoAllowed()) {
                 try {
                     rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
+                    // 获取adapter适配器用来调用容器。
                     getAdapter().service(request, response);
                     // Handle when the response was committed before a serious
                     // error occurred.  Throwing a ServletException should both
@@ -689,7 +698,7 @@ public class Http11Processor extends AbstractProcessor {
             }
 
             rp.setStage(org.apache.coyote.Constants.STAGE_KEEPALIVE);
-
+            // 系统调用，处理文件传输
             sendfileState = processSendfile(socketWrapper);
         }
 
@@ -1074,6 +1083,7 @@ public class Http11Processor extends AbstractProcessor {
     /**
      * When committing the response, we have to validate the set of headers, as
      * well as setup the response filters.
+     * 提交相应时，我们必须验证header集，并设置响应过滤器。
      */
     @Override
     protected final void prepareResponse() throws IOException {

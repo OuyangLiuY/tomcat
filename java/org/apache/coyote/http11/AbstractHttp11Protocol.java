@@ -1086,7 +1086,9 @@ public abstract class AbstractHttp11Protocol<S> extends AbstractProtocol<S> {
     @Override
     protected Processor createProcessor() {
         Http11Processor processor = new Http11Processor(this, getEndpoint());
+        // 设置用来跟引擎连接得适配器
         processor.setAdapter(getAdapter());
+
         processor.setMaxKeepAliveRequests(getMaxKeepAliveRequests());
         processor.setConnectionUploadTimeout(getConnectionUploadTimeout());
         processor.setDisableUploadTimeout(getDisableUploadTimeout());

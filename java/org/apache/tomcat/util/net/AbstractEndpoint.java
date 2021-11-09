@@ -197,6 +197,7 @@ public abstract class AbstractEndpoint<S> {
 
     /**
      * Cache for SocketProcessor objects
+     *  处理缓存
      */
     protected SynchronizedStack<SocketProcessorBase<S>> processorCache;
 
@@ -446,6 +447,7 @@ public abstract class AbstractEndpoint<S> {
 
     /**
      * Acceptor thread count.
+     * 接受线程数量为 1
      */
     protected int acceptorThreadCount = 1;
 

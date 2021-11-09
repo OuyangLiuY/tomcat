@@ -44,7 +44,7 @@ import org.apache.tomcat.util.res.StringManager;
  * Standard implementation of the <code>Service</code> interface.  The
  * associated Container is generally an instance of Engine, but this is
  * not required.
- *
+ * Service接口的基础实现类，关联的容器通常是Engine的一个实例，但是它并不是必须的。
  * @author Craig R. McClanahan
  */
 
@@ -69,18 +69,22 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
     /**
      * The property change support for this component.
+     * 属性更改支持对象
      */
     protected final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 
     /**
      * The set of Connectors associated with this Service.
+     *  与此service关联的一组连接器
      */
-    protected Connector connectors[] = new Connector[0];
+    protected Connector[] connectors = new Connector[0];
     private final Object connectorsLock = new Object();
 
     /**
      * The list of executors held by the service.
+     *  当前service的线程池，
+     *  Executor : 用户处理/执行自己的生命周期
      */
     protected final ArrayList<Executor> executors = new ArrayList<>();
 
@@ -116,10 +120,12 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
     @Override
     public void setContainer(Engine engine) {
+        // 解除旧的
         Engine oldEngine = this.engine;
         if (oldEngine != null) {
             oldEngine.setService(null);
         }
+        // 赋予新的
         this.engine = engine;
         if (this.engine != null) {
             this.engine.setService(this);
@@ -127,6 +133,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         if (getState().isAvailable()) {
             if (this.engine != null) {
                 try {
+                    // 开启新的
                     this.engine.start();
                 } catch (LifecycleException e) {
                     log.error(sm.getString("standardService.engine.startFailed"), e);
@@ -145,6 +152,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
             }
             if (oldEngine != null) {
                 try {
+                    // 结束掉旧的
                     oldEngine.stop();
                 } catch (LifecycleException e) {
                     log.error(sm.getString("standardService.engine.stopFailed"), e);
@@ -153,6 +161,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         }
 
         // Report this property change to interested listeners
+        // 触发对应事件
         support.firePropertyChange("container", oldEngine, this.engine);
     }
 
@@ -210,7 +219,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
         synchronized (connectorsLock) {
             connector.setService(this);
-            Connector results[] = new Connector[connectors.length + 1];
+            Connector[] results = new Connector[connectors.length + 1];
             System.arraycopy(connectors, 0, results, 0, connectors.length);
             results[connectors.length] = connector;
             connectors = results;
@@ -233,7 +242,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
 
 
     public ObjectName[] getConnectorNames() {
-        ObjectName results[] = new ObjectName[connectors.length];
+        ObjectName[] results = new ObjectName[connectors.length];
         for (int i=0; i<results.length; i++) {
             results[i] = connectors[i].getObjectName();
         }
@@ -463,6 +472,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         synchronized (connectorsLock) {
             for (Connector connector: connectors) {
                 try {
+                    // 先暂停
                     connector.pause();
                 } catch (Exception e) {
                     log.error(sm.getString(
@@ -471,6 +481,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
                 }
                 // Close server socket if bound on start
                 // Note: test is in AbstractEndpoint
+                // 关闭当前的协议
                 connector.getProtocolHandler().closeServerSocketGraceful();
             }
         }
@@ -488,6 +499,7 @@ public class StandardService extends LifecycleMBeanBase implements Service {
         }
 
         // Now stop the connectors
+        // 最后停止当前容器
         synchronized (connectorsLock) {
             for (Connector connector: connectors) {
                 if (!LifecycleState.STARTED.equals(

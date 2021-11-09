@@ -28,6 +28,7 @@ public enum SendfileKeepAliveState {
      * Keep-alive is in use and there is pipelined data in the input buffer to
      * be read as soon as the current response has been written.
      */
+    // 保持活动正在使用中，一旦写入当前响应，输入缓冲区中就有要读取的流水线数据。
     PIPELINED,
 
     /**

@@ -35,17 +35,20 @@ import org.apache.juli.logging.LogFactory;
 import org.apache.tomcat.util.ExceptionUtils;
 import org.apache.tomcat.util.res.StringManager;
 
+// 处理数据套接字的基础包装，用于读数据，写数据到buffer
 public abstract class SocketWrapperBase<E> {
 
     private static final Log log = LogFactory.getLog(SocketWrapperBase.class);
 
     protected static final StringManager sm = StringManager.getManager(SocketWrapperBase.class);
-
+    // NioChannel，Nio2Channel
     private final E socket;
+    // 通信协议的实现端点，有 APR，NIO，NIO2
     private final AbstractEndpoint<E> endpoint;
 
     // Volatile because I/O and setting the timeout values occurs on a different
     // thread to the thread checking the timeout.
+    // 设置超时和检查超时是不同的线程
     private volatile long readTimeout = -1;
     private volatile long writeTimeout = -1;
 
@@ -75,6 +78,7 @@ public abstract class SocketWrapperBase<E> {
 
     /**
      * The buffers used for communicating with the socket.
+     * 用于在socket中通信的缓冲区。 是阻塞的缓冲区
      */
     protected volatile SocketBufferHandler socketBufferHandler = null;
 
@@ -92,6 +96,7 @@ public abstract class SocketWrapperBase<E> {
      * Not that while the Servlet API only allows one non-blocking write at a
      * time, due to buffering and the possible need to write HTTP headers, this
      * layer may see multiple writes.
+     * 用于非阻塞的写入缓冲区。
      */
     protected final WriteBuffer nonBlockingWriteBuffer = new WriteBuffer(bufferedWriteSize);
 
@@ -131,6 +136,7 @@ public abstract class SocketWrapperBase<E> {
      * @throws RejectedExecutionException If the runnable cannot be executed
      */
     public void execute(Runnable runnable) {
+        // 执行线程器
         Executor executor = endpoint.getExecutor();
         if (!endpoint.isRunning() || executor == null) {
             throw new RejectedExecutionException();
@@ -715,6 +721,7 @@ public abstract class SocketWrapperBase<E> {
      */
     protected void doWrite(boolean block) throws IOException {
         socketBufferHandler.configureWriteBufferForRead();
+        // 模板方法，根据子类实现具体的写数据逻辑
         doWrite(block, socketBufferHandler.getWriteBuffer());
     }
 

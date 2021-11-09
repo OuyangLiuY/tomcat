@@ -22,6 +22,11 @@ package org.apache.tomcat.util.collections;
  * create a pool of re-usable objects with no requirement to shrink the pool.
  * The aim is to provide the bare minimum of required functionality as quickly
  * as possible with minimum garbage.
+ *  当需要创建可重用对象池而不需求缩小池时，这旨在作为 ConcurrentLinkedQueue 的无GC代替方案。
+ *  主要目标是提尽可能快地提供最低限度的所需功能，同时尽量减少垃圾。
+ *
+ *  栈：一定有大小限制，因为是做缓存的。
+ *
  *
  * @param <T> The type of object managed by this stack
  */
