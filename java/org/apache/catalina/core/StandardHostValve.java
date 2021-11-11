@@ -100,6 +100,7 @@ final class StandardHostValve extends ValveBase {
         throws IOException, ServletException {
 
         // Select the Context to be used for this Request
+        // 获取当前请求中的context上下文对象
         Context context = request.getContext();
         if (context == null) {
             // Don't overwrite an existing error
@@ -136,6 +137,7 @@ final class StandardHostValve extends ValveBase {
                 }
             } catch (Throwable t) {
                 ExceptionUtils.handleThrowable(t);
+                // 记录错误日志
                 container.getLogger().error("Exception Processing " + request.getRequestURI(), t);
                 // If a new error occurred while trying to report a previous
                 // error allow the original error to be reported.
@@ -174,6 +176,7 @@ final class StandardHostValve extends ValveBase {
             }
 
             if (!request.isAsync() && !asyncAtStart) {
+                // 同步得话，销毁当前请求事件
                 context.fireRequestDestroyEvent(request.getRequest());
             }
         } finally {
@@ -182,7 +185,7 @@ final class StandardHostValve extends ValveBase {
             if (ACCESS_SESSION) {
                 request.getSession(false);
             }
-
+            // context 执行完毕之后解绑
             context.unbind(Globals.IS_SECURITY_ENABLED, MY_CLASSLOADER);
         }
     }
@@ -296,12 +299,13 @@ final class StandardHostValve extends ValveBase {
             }
             return;
         }
-
+        // 根据throwable异常找到对应的错误页面
         ErrorPage errorPage = context.findErrorPage(throwable);
         if ((errorPage == null) && (realError != throwable)) {
+            // 获取错误page
             errorPage = context.findErrorPage(realError);
         }
-
+        // 确实有异常发生
         if (errorPage != null) {
             if (response.setErrorReported()) {
                 response.setAppCommitted(false);
@@ -337,10 +341,11 @@ final class StandardHostValve extends ValveBase {
             // that was thrown during request processing. Check if an
             // error-page for error code 500 was specified and if so,
             // send that page back as the response.
+            // 如果确实没有找错误页面，那么就是系统发生的异常，也就是服务器500异常
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             // The response is an error
             response.setError();
-
+            // 将错误输出到客户端
             status(request, response);
         }
     }

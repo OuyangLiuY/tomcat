@@ -25,6 +25,9 @@ import java.util.Set;
  * Represents the complete set of resources for a web application. The resources
  * for a web application comprise of multiple ResourceSets and when looking for
  * a Resource, the ResourceSets are processed in the following order:
+ * 表示 Web 应用程序的完整资源集。 Web 应用程序的资源由多个 ResourceSet 组成，
+ * 在查找资源时，ResourceSet 按以下顺序处理：
+ *  Pre -> Main -> JARs -> Post
  * <ol>
  * <li>Pre  - Resources defined by the &lt;PreResource&gt; element in the web
  *            application's context.xml. Resources will be searched in the order

@@ -29,7 +29,7 @@ public interface Adapter {
 
     /**
      * Call the service method, and notify all listeners
-     * 调用service的方法，并且通知所有的监听器。
+     * 调用service的方法，并且唤醒所有的监听器。也就是容器跟connection连接桥梁
      * @param req The request object
      * @param res The response object
      *

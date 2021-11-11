@@ -26,7 +26,9 @@ import java.util.Set;
  * than trying to pass the request on.</p>
  *
  * <p>There is generally a single Pipeline instance associated with each
- * Container.  The container's normal request processing functionality is
+ * Container.
+ * 通常只有一个Pipeline实例时跟每个容器相关。
+ * The container's normal request processing functionality is
  * generally encapsulated in a container-specific Valve, which should always
  * be executed at the end of a pipeline.  To facilitate this, the
  * <code>setBasic()</code> method is provided to set the Valve instance that
@@ -41,6 +43,7 @@ public interface Pipeline extends Contained {
     /**
      * @return the Valve instance that has been distinguished as the basic
      * Valve for this Pipeline (if any).
+     * 在此pipeline中Valve的实例必须需要被区分为basic valve。（如果有）
      */
     public Valve getBasic();
 

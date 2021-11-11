@@ -36,7 +36,7 @@ import org.apache.tomcat.util.security.Escape;
 
 /**
  * <p>Implementation of a Valve that outputs HTML error pages.</p>
- *
+ * 错误页面处理类
  * <p>This Valve should be attached at the Host level, although it will work
  * if attached to a Context.</p>
  *
@@ -78,27 +78,31 @@ public class ErrorReportValve extends ValveBase {
     public void invoke(Request request, Response response) throws IOException, ServletException {
 
         // Perform the request
+        // 如果有next，执行下一个责任链上的invoke
         getNext().invoke(request, response);
-
+        // 如果当前response已经提交了，结果报错了
         if (response.isCommitted()) {
-            if (response.setErrorReported()) {
+            if (response.setErrorReported()) { // cas设置报错状态
                 // Error wasn't previously reported but we can't write an error
                 // page because the response has already been committed.
 
                 // See if IO is allowed
                 AtomicBoolean ioAllowed = new AtomicBoolean(true);
                 response.getCoyoteResponse().action(ActionCode.IS_IO_ALLOWED, ioAllowed);
-
+                // 当前IO操作允许，也就是IO正常
                 if (ioAllowed.get()) {
                     // I/O is currently still allowed. Flush any data that is
                     // still to be written to the client.
                     try {
+                        // 将错误报文直接输出到客户端
                         response.flushBuffer();
                     } catch (Throwable t) {
                         ExceptionUtils.handleThrowable(t);
                     }
                     // Now close immediately to signal to the client that
                     // something went wrong
+                    // 立刻关闭向客户端发送错误信息的信号。
+                    // 使用action hook 去异步调用关闭事件。
                     response.getCoyoteResponse().action(ActionCode.CLOSE_NOW,
                             request.getAttribute(RequestDispatcher.ERROR_EXCEPTION));
                 }
@@ -130,6 +134,7 @@ public class ErrorReportValve extends ValveBase {
         response.setSuspended(false);
 
         try {
+            // 构建错误页面，并直接通过输出流缓冲区写出到客户端
             report(request, response, throwable);
         } catch (Throwable tt) {
             ExceptionUtils.handleThrowable(tt);

@@ -108,6 +108,7 @@ public class StandardPipeline extends LifecycleBase implements Pipeline {
         Valve valve = (first!=null)?first:basic;
         boolean supported = true;
         while (supported && valve!=null) {
+            // 只有有一个不支持异步，那就直接返回false
             supported = supported & valve.isAsyncSupported();
             valve = valve.getNext();
         }
@@ -176,7 +177,7 @@ public class StandardPipeline extends LifecycleBase implements Pipeline {
             }
             current = current.getNext();
         }
-
+        // 调用所有的启动方法，最后设置开始的状态
         setState(LifecycleState.STARTING);
     }
 
@@ -190,7 +191,7 @@ public class StandardPipeline extends LifecycleBase implements Pipeline {
      */
     @Override
     protected synchronized void stopInternal() throws LifecycleException {
-
+        // 先设置状态，再执行stop操作，以便于再stop抛出异常时，也可以处理
         setState(LifecycleState.STOPPING);
 
         // Stop the Valves in our pipeline (including the basic), if any

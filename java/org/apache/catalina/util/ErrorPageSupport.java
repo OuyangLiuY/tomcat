@@ -30,16 +30,18 @@ import org.apache.tomcat.util.descriptor.web.ErrorPage;
 public class ErrorPageSupport {
 
     // Fully qualified class name to error page
+    // 根据错误类型缓存错误页面数据
     private ConcurrentMap<String, ErrorPage> exceptionPages = new ConcurrentHashMap<>();
 
     // HTTP status code to error page
+    // 根据http状态码缓存错误页面数据
     private ConcurrentMap<Integer, ErrorPage> statusPages = new ConcurrentHashMap<>();
 
 
     public void add(ErrorPage errorPage) {
         String exceptionType = errorPage.getExceptionType();
         if (exceptionType == null) {
-            statusPages.put(Integer.valueOf(errorPage.getErrorCode()), errorPage);
+            statusPages.put(errorPage.getErrorCode(), errorPage);
         } else {
             exceptionPages.put(exceptionType, errorPage);
         }

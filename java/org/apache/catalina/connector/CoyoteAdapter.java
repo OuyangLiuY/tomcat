@@ -342,6 +342,7 @@ public class CoyoteAdapter implements Adapter {
             response.setRequest(request);
 
             // Set as notes
+            // 将其缓存到对象数组中
             req.setNote(ADAPTER_NOTES, request);
             res.setNote(ADAPTER_NOTES, response);
 
@@ -371,9 +372,11 @@ public class CoyoteAdapter implements Adapter {
                 // Calling the container
                 // 开始执行容器，通过pipeline的valve
                 // 使用Valve的invoke来传递request和response，调用流程是: engine -> host -> context
+                // 当这个方法执行完毕之后，数据都会再request和response中
                 connector.getService().getContainer().getPipeline().getFirst().invoke(
                         request, response);
             }
+            // 异步
             if (request.isAsync()) {
                 async = true;
                 // 异步的话，是有读监听和监听的。
@@ -401,8 +404,10 @@ public class CoyoteAdapter implements Adapter {
                 if (!request.isAsyncCompleting() && throwable != null) {
                     request.getAsyncContextInternal().setErrorState(throwable, true);
                 }
-            } else {
+            } else { //同步
+                // 关闭input缓冲区
                 request.finishRequest();
+                // 完成数据的flush，将数据从outputBuffer中写出到客户端
                 response.finishResponse();
             }
 
@@ -421,6 +426,7 @@ public class CoyoteAdapter implements Adapter {
             }
 
             // Access log
+            // 处理日志
             if (!async && postParseSuccess) {
                 // Log only if processing was invoked.
                 // If postParseRequest() failed, it has already logged it.
@@ -437,8 +443,9 @@ public class CoyoteAdapter implements Adapter {
                 long time = System.currentTimeMillis() - req.getStartTime();
                 if (context != null) {
                     context.logAccess(request, response, time, false);
-                } else if (response.isError()) {
+                } else if (response.isError()) { // 响应有错误，记录日志
                     if (host != null) {
+                        // 记录日志
                         host.logAccess(request, response, time, false);
                     } else {
                         connector.getService().getContainer().logAccess(
@@ -446,12 +453,14 @@ public class CoyoteAdapter implements Adapter {
                     }
                 }
             }
-
+            // 恢复当前线程名
             req.getRequestProcessor().setWorkerThreadName(null);
 
             // Recycle the wrapper request and response
             if (!async) {
+                // 更新错误记录数
                 updateWrapperErrorCount(request, response);
+                // 回收数据
                 request.recycle();
                 response.recycle();
             }

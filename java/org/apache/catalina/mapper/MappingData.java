@@ -27,6 +27,7 @@ import org.apache.tomcat.util.buf.MessageBytes;
  *
  * @author Remy Maucherat
  */
+// 映射数据：当前整请求中所需要的一些关键数据
 public class MappingData {
 
     public Host host = null;

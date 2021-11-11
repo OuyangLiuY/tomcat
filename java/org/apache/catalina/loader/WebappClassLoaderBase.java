@@ -80,6 +80,7 @@ import org.apache.tomcat.util.security.PermissionCheck;
 
 /**
  * Specialized web application class loader.
+ *  tomcat中特有的web应用程序类加载器。
  * <p>
  * This class loader is a full reimplementation of the
  * <code>URLClassLoader</code> from the JDK. It is designed to be fully
@@ -839,7 +840,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
         if (log.isDebugEnabled()) {
             log.debug("    findClass(" + name + ")");
         }
-
+        // 检查类的加载状态
         checkStateForClassLoading(name);
 
         // (1) Permission to define this class when using a SecurityManager
@@ -873,6 +874,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
                         new PrivilegedFindClassByName(name);
                     clazz = AccessController.doPrivileged(dp);
                 } else {
+                    // 从本地缓存中的根据具体类名查找
                     clazz = findClassInternal(name);
                 }
             } catch(AccessControlException ace) {
@@ -887,6 +889,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
             if ((clazz == null) && hasExternalRepositories) {
                 try {
+                    // 没有找到的话，直接从父类查找
                     clazz = super.findClass(name);
                 } catch(AccessControlException ace) {
                     log.warn(sm.getString("webappClassLoader.securityException", name,
@@ -1262,6 +1265,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             checkStateForClassLoading(name);
 
             // (0) Check our previously loaded local class cache
+            // 1. 从本地缓存中查找是否加载过此类
             clazz = findLoadedClass0(name);
             if (clazz != null) {
                 if (log.isDebugEnabled()) {
@@ -1274,6 +1278,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (0.1) Check our previously loaded class cache
+            // 2. 从AppClassLoader中查找是否加载过此类
             clazz = findLoadedClass(name);
             if (clazz != null) {
                 if (log.isDebugEnabled()) {
@@ -1289,7 +1294,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             //       the webapp from overriding Java SE classes. This implements
             //       SRV.10.7.2
             String resourceName = binaryNameToPath(name, false);
-
+            // 3. 尝试用ExtClassLoader 类加载器加载类,防止Web应用覆盖JRE的核心类
             ClassLoader javaseLoader = getJavaseClassLoader();
             boolean tryLoadingFromJavaseLoader;
             try {
@@ -1351,6 +1356,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             boolean delegateLoad = delegate || filter(name, true);
 
             // (1) Delegate to our parent if requested
+            // 4. 判断是否设置了delegate属性,如果设置为true那么就按照双亲委派机制加载类
             if (delegateLoad) {
                 if (log.isDebugEnabled()) {
                     log.debug("  Delegating to parent classloader1 " + parent);
@@ -1372,10 +1378,13 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (2) Search local repositories
+            // 5. 默认是设置delegate是false的,那么就会先用WebAppClassLoader进行加载
             if (log.isDebugEnabled()) {
                 log.debug("  Searching local repositories");
             }
             try {
+                // 不使用父类的加载器，重写了findClass
+                // ***这里才是真正打破双亲委派机制的代码。***
                 clazz = findClass(name);
                 if (clazz != null) {
                     if (log.isDebugEnabled()) {
@@ -1391,11 +1400,13 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // (3) Delegate to parent unconditionally
+            // 6. 如果此时在WebAppClassLoader没找到类,那么就委托给AppClassLoader去加载
             if (!delegateLoad) {
                 if (log.isDebugEnabled()) {
                     log.debug("  Delegating to parent classloader at end: " + parent);
                 }
                 try {
+                    // 直接根据name（包名）创建出clazz对象
                     clazz = Class.forName(name, false, parent);
                     if (clazz != null) {
                         if (log.isDebugEnabled()) {
@@ -2362,8 +2373,9 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
         WebResource resource = null;
 
         if (entry == null) {
+            // 获取/WEB-INF/下的资源对象
             resource = resources.getClassLoaderResource(path);
-
+            // 不存在返回
             if (!resource.exists()) {
                 return null;
             }
@@ -2376,16 +2388,18 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
                 // Ensures that all the threads which may be in a race to load
                 // a particular class all end up with the same ResourceEntry
                 // instance
+                // 缓存中查一下
                 ResourceEntry entry2 = resourceEntries.get(path);
-                if (entry2 == null) {
+                if (entry2 == null) { // 不存在，加入缓存
                     resourceEntries.put(path, entry);
                 } else {
                     entry = entry2;
                 }
             }
         }
-
+        // 处理entry的类加载器
         Class<?> clazz = entry.loadedClass;
+        //有，已经找到，直接返回
         if (clazz != null) {
             return clazz;
         }
@@ -2437,6 +2451,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             // Looking up the package
+            // 看一下是不是包名。根据包名去找类加载器
             String packageName = null;
             int pos = name.lastIndexOf('.');
             if (pos != -1) {
@@ -2481,6 +2496,7 @@ public abstract class WebappClassLoaderBase extends URLClassLoader
             }
 
             try {
+                // 根据jar包中class字节码，获取当前的clazz对象
                 clazz = defineClass(name, binaryContent, 0,
                         binaryContent.length, new CodeSource(codeBase, certificates));
             } catch (UnsupportedClassVersionError ucve) {
